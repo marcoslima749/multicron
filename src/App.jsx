@@ -14,6 +14,9 @@ function App() {
 
   const [numStopWs, setNumStopWs] = useState(3);
 
+  // Estado para almacenar el tiempo en que la pestaña se volvió inactiva
+  const [inactiveTime, setInactiveTime] = useState(null);
+
   // Estado que almacena la información de cada cronómetro: su ID, tiempo y si está activo.
   const [stopW, setStopW] = useState([
     { id: 1, time: new Date(2023, 0, 1, 0, 0, 0, 0), isActive: false },
@@ -133,8 +136,42 @@ function App() {
       );
     }, 10);
 
-    return () => clearInterval(intervalId);
-  }, []);
+    // Escucha el evento 'visibilitychange' para detectar cambios en la visibilidad de la pestaña
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Si la pestaña está inactiva, guarda el tiempo actual en 'inactiveTime'
+        setInactiveTime(new Date());
+      } else {
+        // Si la pestaña está activa, calcula el tiempo transcurrido desde que la pestaña estaba inactiva
+        const currentTime = new Date();
+        const elapsedTime = currentTime - inactiveTime;
+
+        // Actualiza los cronómetros activos con el tiempo transcurrido
+        setStopW((prevStopWs) =>
+          prevStopWs.map((stopW) =>
+            stopW.isActive
+              ? {
+                  ...stopW,
+                  time: new Date(stopW.time.getTime() + elapsedTime),
+                }
+              : stopW
+          )
+        );
+
+        // Restablece el tiempo inactivo
+        setInactiveTime(null);
+      }
+    };
+
+    // Agrega el controlador del evento 'visibilitychange' al objeto 'document'
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      // Elimina el controlador del evento 'visibilitychange' al desmontar el componente
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [inactiveTime]);
 
   return (
     <div className="container mt-5">
@@ -197,8 +234,10 @@ function App() {
         ))}
       </div>
       <div className="my-4 mx-auto mt-5" style={{ width: 18 + "rem" }}>
-        <label className="form-label text-center 
- d-block px-5">
+        <label
+          className="form-label text-center 
+ d-block px-5"
+        >
           Cronómetros:
           <input
             className="numberOfCrhons form-control text-center"
